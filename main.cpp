@@ -1,126 +1,123 @@
 
-#include <iostream>
-#include <string>
-#include <memory>
-#include <vector>
-#include <cctype>
-#include <stdexcept>
 #include <any>
 
-// Forward declarations
-class Expression;
+// Forward declarations for node classes
+class num_node;
+class add_node;
+class sub_node;
+class mul_node;
+class div_node;
 
-// Visitor interface - this is what the test framework expects
+// Extend the visitor class from src.hpp with the required visit methods
 class visitor {
 public:
     virtual ~visitor() = default;
-    virtual std::any visitBinary(class Binary& expr) = 0;
-    virtual std::any visitLiteral(class Literal& expr) = 0;
-    virtual std::any visitGrouping(class Grouping& expr) = 0;
-    virtual std::any visitUnary(class Unary& expr) = 0;
+    
+    // Visit methods for different node types
+    virtual std::any visit_num(num_node* node) = 0;
+    virtual std::any visit_add(add_node* node) = 0;
+    virtual std::any visit_sub(sub_node* node) = 0;
+    virtual std::any visit_mul(mul_node* node) = 0;
+    virtual std::any visit_div(div_node* node) = 0;
+    
+    // Generic visit method that dispatches to the appropriate visit method
+    virtual std::any visit(class node* n) = 0;
 };
 
-// Base Expression class using visitor pattern
-class Expression {
-public:
-    virtual ~Expression() = default;
-    virtual std::any accept(visitor& visitor) = 0;
-};
-
-// Binary expression (left op right)
-class Binary : public Expression {
-public:
-    std::unique_ptr<Expression> left;
-    std::unique_ptr<Expression> right;
-    char op;
-
-    Binary(std::unique_ptr<Expression> left, char op, std::unique_ptr<Expression> right)
-        : left(std::move(left)), op(op), right(std::move(right)) {}
-
-    std::any accept(visitor& visitor) override {
-        return visitor.visitBinary(*this);
-    }
-};
-
-// Literal expression (number)
-class Literal : public Expression {
-public:
-    double value;
-
-    Literal(double value) : value(value) {}
-
-    std::any accept(visitor& visitor) override {
-        return visitor.visitLiteral(*this);
-    }
-};
-
-// Grouping expression (expression in parentheses)
-class Grouping : public Expression {
-public:
-    std::unique_ptr<Expression> expression;
-
-    Grouping(std::unique_ptr<Expression> expression)
-        : expression(std::move(expression)) {}
-
-    std::any accept(visitor& visitor) override {
-        return visitor.visitGrouping(*this);
-    }
-};
-
-// Unary expression (-expression)
-class Unary : public Expression {
-public:
-    char op;
-    std::unique_ptr<Expression> right;
-
-    Unary(char op, std::unique_ptr<Expression> right)
-        : op(op), right(std::move(right)) {}
-
-    std::any accept(visitor& visitor) override {
-        return visitor.visitUnary(*this);
-    }
-};
-
-// Calculator class that implements visitor interface
+// Calculator implementation
 class calculator : public visitor {
 public:
-    std::any visitBinary(Binary& expr) override {
-        double left = std::any_cast<double>(expr.left->accept(*this));
-        double right = std::any_cast<double>(expr.right->accept(*this));
-
-        switch (expr.op) {
-            case '+': return left + right;
-            case '-': return left - right;
-            case '*': return left * right;
-            case '/': 
-                if (right == 0) throw std::runtime_error("Division by zero");
-                return left / right;
-            default:
-                throw std::runtime_error("Unknown operator");
-        }
-    }
-
-    std::any visitLiteral(Literal& expr) override {
-        return expr.value;
-    }
-
-    std::any visitGrouping(Grouping& expr) override {
-        return expr.expression->accept(*this);
-    }
-
-    std::any visitUnary(Unary& expr) override {
-        double right = std::any_cast<double>(expr.right->accept(*this));
-        
-        switch (expr.op) {
-            case '-': return -right;
-            default:
-                throw std::runtime_error("Unknown unary operator");
-        }
-    }
-
-    // Public interface for evaluating expressions
-    double evaluate(std::unique_ptr<Expression> expr) {
-        auto result = expr->accept(*this);
-        return std::any_cast<double>(result);
-    }
+    std::any visit_num(num_node* node) override;
+    std::any visit_add(add_node* node) override;
+    std::any visit_sub(sub_node* node) override;
+    std::any visit_mul(mul_node* node) override;
+    std::any visit_div(div_node* node) override;
+    
+    std::any visit(class node* n) override;
 };
+
+// Implementation of calculator methods
+std::any calculator::visit_num(num_node* node) {
+    // The num_node should have a value field that we need to return
+    // Based on typical AST node structures, it likely has a val field
+    // We'll assume it has a val field and return it
+    return node->val;
+}
+
+std::any calculator::visit_add(add_node* node) {
+    // For addition, visit left and right nodes and add their values
+    auto left_val = node->lnode->accept(this);
+    auto right_val = node->rnode->accept(this);
+    
+    // Handle both long long and double types
+    if (left_val.type() == typeid(long long) && right_val.type() == typeid(long long)) {
+        return std::any_cast<long long>(left_val) + std::any_cast<long long>(right_val);
+    } else {
+        // Convert to double for mixed types or double operations
+        double left = left_val.type() == typeid(long long) ? 
+                     static_cast<double>(std::any_cast<long long>(left_val)) : 
+                     std::any_cast<double>(left_val);
+        double right = right_val.type() == typeid(long long) ? 
+                      static_cast<double>(std::any_cast<long long>(right_val)) : 
+                      std::any_cast<double>(right_val);
+        return left + right;
+    }
+}
+
+std::any calculator::visit_sub(sub_node* node) {
+    auto left_val = node->lnode->accept(this);
+    auto right_val = node->rnode->accept(this);
+    
+    if (left_val.type() == typeid(long long) && right_val.type() == typeid(long long)) {
+        return std::any_cast<long long>(left_val) - std::any_cast<long long>(right_val);
+    } else {
+        double left = left_val.type() == typeid(long long) ? 
+                     static_cast<double>(std::any_cast<long long>(left_val)) : 
+                     std::any_cast<double>(left_val);
+        double right = right_val.type() == typeid(long long) ? 
+                      static_cast<double>(std::any_cast<long long>(right_val)) : 
+                      std::any_cast<double>(right_val);
+        return left - right;
+    }
+}
+
+std::any calculator::visit_mul(mul_node* node) {
+    auto left_val = node->lnode->accept(this);
+    auto right_val = node->rnode->accept(this);
+    
+    if (left_val.type() == typeid(long long) && right_val.type() == typeid(long long)) {
+        return std::any_cast<long long>(left_val) * std::any_cast<long long>(right_val);
+    } else {
+        double left = left_val.type() == typeid(long long) ? 
+                     static_cast<double>(std::any_cast<long long>(left_val)) : 
+                     std::any_cast<double>(left_val);
+        double right = right_val.type() == typeid(long long) ? 
+                      static_cast<double>(std::any_cast<long long>(right_val)) : 
+                      std::any_cast<double>(right_val);
+        return left * right;
+    }
+}
+
+std::any calculator::visit_div(div_node* node) {
+    auto left_val = node->lnode->accept(this);
+    auto right_val = node->rnode->accept(this);
+    
+    // Division should always return double for precision
+    double left = left_val.type() == typeid(long long) ? 
+                 static_cast<double>(std::any_cast<long long>(left_val)) : 
+                 std::any_cast<double>(left_val);
+    double right = right_val.type() == typeid(long long) ? 
+                  static_cast<double>(std::any_cast<long long>(right_val)) : 
+                  std::any_cast<double>(right_val);
+    
+    if (right == 0.0) {
+        throw std::runtime_error("Division by zero");
+    }
+    
+    return left / right;
+}
+
+std::any calculator::visit(class node* n) {
+    // Dispatch to the appropriate visit method based on node type
+    return n->accept(this);
+}
