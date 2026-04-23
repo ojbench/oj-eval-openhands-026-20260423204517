@@ -1,46 +1,9 @@
 
 #include <any>
 
-// Forward declarations for node classes
-class num_node;
-class add_node;
-class sub_node;
-class mul_node;
-class div_node;
-
-// Extend the visitor class from src.hpp with the required visit methods
-class visitor {
-public:
-    virtual ~visitor() = default;
-    
-    // Visit methods for different node types
-    virtual std::any visit_num(num_node* node) = 0;
-    virtual std::any visit_add(add_node* node) = 0;
-    virtual std::any visit_sub(sub_node* node) = 0;
-    virtual std::any visit_mul(mul_node* node) = 0;
-    virtual std::any visit_div(div_node* node) = 0;
-    
-    // Generic visit method that dispatches to the appropriate visit method
-    virtual std::any visit(class node* n) = 0;
-};
-
-// Calculator implementation
-class calculator : public visitor {
-public:
-    std::any visit_num(num_node* node) override;
-    std::any visit_add(add_node* node) override;
-    std::any visit_sub(sub_node* node) override;
-    std::any visit_mul(mul_node* node) override;
-    std::any visit_div(div_node* node) override;
-    
-    std::any visit(class node* n) override;
-};
-
 // Implementation of calculator methods
 std::any calculator::visit_num(num_node* node) {
-    // The num_node should have a value field that we need to return
-    // Based on typical AST node structures, it likely has a val field
-    // We'll assume it has a val field and return it
+    // Return the value from the num_node
     return node->val;
 }
 
