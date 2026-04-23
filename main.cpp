@@ -1,6 +1,26 @@
 
 #include <any>
 
+// Forward declarations
+class num_node;
+class add_node;
+class sub_node;
+class mul_node;
+class div_node;
+class node;
+class visitor;
+
+// Calculator class declaration
+class calculator : public visitor {
+public:
+    std::any visit_num(num_node* node);
+    std::any visit_add(add_node* node);
+    std::any visit_sub(sub_node* node);
+    std::any visit_mul(mul_node* node);
+    std::any visit_div(div_node* node);
+    std::any visit(node* n);
+};
+
 // Implementation of calculator methods
 std::any calculator::visit_num(num_node* node) {
     // Return the value from the num_node
@@ -80,7 +100,7 @@ std::any calculator::visit_div(div_node* node) {
     return left / right;
 }
 
-std::any calculator::visit(class node* n) {
+std::any calculator::visit(node* n) {
     // Dispatch to the appropriate visit method based on node type
     return n->accept(this);
 }
